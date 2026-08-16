@@ -3,6 +3,7 @@ import pandas as pd
 import time
 from datetime import datetime
 import json
+from sqlalchemy import text
 
 # --- Constants & Config ---
 st.set_page_config(
@@ -20,7 +21,7 @@ conn = st.connection('sql', type='sql', url='sqlite:///crm_database.db')
 
 def init_db():
     with conn.session as s:
-        s.execute('''
+        s.execute(text('''
             CREATE TABLE IF NOT EXISTS leads (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 first_name TEXT,
@@ -31,8 +32,8 @@ def init_db():
                 stage TEXT,
                 created_at TIMESTAMP
             )
-        ''')
-        s.execute('''
+        '''))
+        s.execute(text('''
             CREATE TABLE IF NOT EXISTS activities (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 lead_id INTEGER,
@@ -40,7 +41,7 @@ def init_db():
                 details TEXT,
                 created_at TIMESTAMP
             )
-        ''')
+        '''))
         s.commit()
 
 init_db()
@@ -49,39 +50,39 @@ init_db()
 def add_lead(first_name, last_name, email, company, lead_source):
     created_at = datetime.now()
     with conn.session as s:
-        s.execute('''
+        s.execute(text('''
             INSERT INTO leads (first_name, last_name, email, company, lead_source, stage, created_at)
             VALUES (:fn, :ln, :em, :co, :ls, :st, :ca)
-        ''', {'fn': first_name, 'ln': last_name, 'em': email, 'co': company, 'ls': lead_source, 'st': 'New', 'ca': created_at})
+        '''), {'fn': first_name, 'ln': last_name, 'em': email, 'co': company, 'ls': lead_source, 'st': 'New', 'ca': created_at})
         s.commit()
         
         # Get the inserted ID
-        result = s.execute("SELECT id FROM leads ORDER BY id DESC LIMIT 1").fetchone()
+        result = s.execute(text("SELECT id FROM leads ORDER BY id DESC LIMIT 1")).fetchone()
         lead_id = result[0]
         
         # Log creation activity
-        s.execute('''
+        s.execute(text('''
             INSERT INTO activities (lead_id, activity_type, details, created_at)
             VALUES (:lid, :at, :det, :ca)
-        ''', {'lid': lead_id, 'at': 'System', 'det': 'Lead created via Dashboard.', 'ca': created_at})
+        '''), {'lid': lead_id, 'at': 'System', 'det': 'Lead created via Dashboard.', 'ca': created_at})
         s.commit()
     return lead_id
 
 def update_lead_stage(lead_id, new_stage):
     with conn.session as s:
-        s.execute("UPDATE leads SET stage = :ns WHERE id = :id", {'ns': new_stage, 'id': lead_id})
-        s.execute('''
+        s.execute(text("UPDATE leads SET stage = :ns WHERE id = :id"), {'ns': new_stage, 'id': lead_id})
+        s.execute(text('''
             INSERT INTO activities (lead_id, activity_type, details, created_at)
             VALUES (:lid, :at, :det, :ca)
-        ''', {'lid': lead_id, 'at': 'Stage Change', 'det': f'Moved to {new_stage}', 'ca': datetime.now()})
+        '''), {'lid': lead_id, 'at': 'Stage Change', 'det': f'Moved to {new_stage}', 'ca': datetime.now()})
         s.commit()
 
 def log_activity(lead_id, activity_type, details):
     with conn.session as s:
-        s.execute('''
+        s.execute(text('''
             INSERT INTO activities (lead_id, activity_type, details, created_at)
             VALUES (:lid, :at, :det, :ca)
-        ''', {'lid': lead_id, 'at': activity_type, 'det': details, 'ca': datetime.now()})
+        '''), {'lid': lead_id, 'at': activity_type, 'det': details, 'ca': datetime.now()})
         s.commit()
 
 def get_leads_df():
