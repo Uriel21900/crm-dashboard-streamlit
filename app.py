@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import text
 from streamlit_option_menu import option_menu
 import plotly.graph_objects as go
+import plotly.express as px
 
 # --- Constants & Config ---
 st.set_page_config(
@@ -33,15 +34,14 @@ st.markdown("""
     }
     .metric-value-green {
         font-size: 36px;
-        color: #28a745; /* Green */
+        color: #28a745;
         font-weight: 700;
     }
     .metric-value-blue {
         font-size: 36px;
-        color: #007bff; /* Blue */
+        color: #007bff;
         font-weight: 700;
     }
-    /* Hide Streamlit default padding for top */
     .block-container {
         padding-top: 2rem;
     }
@@ -144,9 +144,47 @@ def create_gauge(title, value, color):
     fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=20))
     return fig
 
-
 leads_df = get_leads_df()
 activities_df = get_activities_df()
+
+# --- MOCK DATA FOR DEMO TABS ---
+mock_contacts = pd.DataFrame({
+    "Name": ["Sarah Connor", "Bruce Wayne", "Clark Kent", "Diana Prince", "Tony Stark"],
+    "Role": ["Director of Security", "CEO", "Investigative Journalist", "Curator", "CTO"],
+    "Company": ["Cyberdyne", "Wayne Enterprises", "Daily Planet", "Louvre", "Stark Industries"],
+    "Phone": ["555-0192", "555-0101", "555-0123", "555-0144", "555-0199"],
+    "Last Contacted": ["2026-08-10", "2026-08-14", "2026-08-01", "2026-08-15", "2026-07-30"]
+})
+
+mock_accounts = pd.DataFrame({
+    "Account Name": ["Wayne Enterprises", "Stark Industries", "Daily Planet", "Cyberdyne", "Acme Corp"],
+    "Industry": ["Defense", "Technology", "Media", "Robotics", "Manufacturing"],
+    "Employees": ["10,000+", "5,000+", "500", "2,000", "1,500"],
+    "Annual Revenue": ["$1.2B", "$2.5B", "$50M", "$400M", "$150M"],
+    "Account Owner": ["Alice", "Bob", "Alice", "Charlie", "Bob"]
+})
+
+mock_landing_pages = pd.DataFrame({
+    "Page Name": ["Q3 Webinar Sign-up", "Main Product Demo", "Newsletter Opt-in", "E-book Download"],
+    "Status": ["🟢 Active", "🟢 Active", "🟢 Active", "🔴 Paused"],
+    "Page Views": [3420, 15000, 890, 4500],
+    "Conversions": [677, 1200, 400, 900],
+    "Conversion Rate": ["19.8%", "8.0%", "44.9%", "20.0%"]
+})
+
+mock_events = pd.DataFrame({
+    "Event Name": ["No-code days Miami", "Q4 Sales Kickoff", "Tech Expo 2026", "Executive Dinner"],
+    "Type": ["Conference", "Internal", "Trade Show", "Networking"],
+    "Date": ["Oct 12, 2026", "Dec 01, 2026", "Nov 15, 2026", "Sep 20, 2026"],
+    "Registered": [677, 120, 450, 25]
+})
+
+mock_marketing_plans = pd.DataFrame({
+    "Campaign": ["Email Nurture Track", "LinkedIn Ads", "SEO Optimization", "Webinar Series"],
+    "Budget": ["$5,000", "$25,000", "$10,000", "$15,000"],
+    "Start Date": ["Aug 01, 2026", "Sep 01, 2026", "Jul 15, 2026", "Oct 01, 2026"],
+    "Status": ["In Progress", "Planning", "In Progress", "Planning"]
+})
 
 # --- SIDEBAR NAVIGATION ---
 with st.sidebar:
@@ -157,7 +195,7 @@ with st.sidebar:
         options=["Home", "Contacts", "Campaigns", "Email", "Landing pages", "Events", "Leads", "Accounts", "Dashboards", "Marketing plans"],
         icons=["house", "person-badge", "megaphone", "envelope", "window", "balloon", "person-lines-fill", "building", "bar-chart", "calendar"],
         menu_icon="cast",
-        default_index=0, # Default to Home
+        default_index=0,
         styles={
             "container": {"padding": "0!important", "background-color": "transparent"},
             "icon": {"color": "#a0a0a0", "font-size": "18px"}, 
@@ -167,62 +205,24 @@ with st.sidebar:
     )
 
 # --- GLOBAL LAYOUT: 3-PANE SPLIT ---
-# Pane 1 is Sidebar. Pane 2 is Main Content. Pane 3 is AI Agent.
 col_main, col_ai = st.columns([3, 1])
 
 with col_main:
-    # ----------------------------------------
-    # MODULE: HOME (SALES MANAGER DASHBOARD)
-    # ----------------------------------------
+    # 1. HOME
     if selected_menu == "Home":
         st.markdown("### Sales manager homepage")
         st.divider()
-        
-        # Top KPI Row
         m1, m2, m3, m4 = st.columns(4)
         with m1:
-            st.markdown("""
-                <div class="metric-card">
-                    <div class="metric-title"># Open opportunities</div>
-                    <div class="metric-value-blue">57</div>
-                </div>
-            """, unsafe_allow_html=True)
-            st.markdown("""
-                <div class="metric-card">
-                    <div class="metric-title">$ Closed won</div>
-                    <div class="metric-value-blue">800,000</div>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="metric-card"><div class="metric-title"># Open opportunities</div><div class="metric-value-blue">57</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="metric-card"><div class="metric-title">$ Closed won</div><div class="metric-value-blue">800,000</div></div>', unsafe_allow_html=True)
         with m2:
-            st.markdown("""
-                <div class="metric-card">
-                    <div class="metric-title">$ Open pipeline</div>
-                    <div class="metric-value-blue">4,966,548</div>
-                </div>
-            """, unsafe_allow_html=True)
-            st.markdown("""
-                <div class="metric-card">
-                    <div class="metric-title">% Quota gap</div>
-                    <div style="font-size: 36px; color: #dc3545; font-weight: 700;">20</div>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="metric-card"><div class="metric-title">$ Open pipeline</div><div class="metric-value-blue">4,966,548</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="metric-card"><div class="metric-title">% Quota gap</div><div style="font-size: 36px; color: #dc3545; font-weight: 700;">20</div></div>', unsafe_allow_html=True)
         with m3:
-            st.markdown("""
-                <div class="metric-card">
-                    <div class="metric-title">$ Quota Target</div>
-                    <div class="metric-value-blue">1,000,000</div>
-                </div>
-            """, unsafe_allow_html=True)
-            st.markdown("""
-                <div class="metric-card">
-                    <div class="metric-title">$ At Risk Deals</div>
-                    <div style="font-size: 36px; color: #dc3545; font-weight: 700;">200,000</div>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="metric-card"><div class="metric-title">$ Quota Target</div><div class="metric-value-blue">1,000,000</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="metric-card"><div class="metric-title">$ At Risk Deals</div><div style="font-size: 36px; color: #dc3545; font-weight: 700;">200,000</div></div>', unsafe_allow_html=True)
             
-        st.divider()
-        
-        # Bottom Chart Row
         c1, c2 = st.columns(2)
         with c1:
             with st.container(border=True):
@@ -231,42 +231,30 @@ with col_main:
             with st.container(border=True):
                 st.plotly_chart(create_gauge("% Conversion rate", 41, "#28a745"), use_container_width=True)
 
-    # ----------------------------------------
-    # MODULE: CAMPAIGNS
-    # ----------------------------------------
+    # 2. CONTACTS
+    elif selected_menu == "Contacts":
+        st.markdown("### Contact Directory")
+        st.dataframe(mock_contacts, hide_index=True, use_container_width=True)
+
+    # 3. CAMPAIGNS (Interactive)
     elif selected_menu == "Campaigns":
         st.markdown("### ← Q3 'No-code days Miami' event invitation & products promotion campaign")
-        
-        col_left, col_right = st.columns([1, 2])
-        
-        with col_left:
+        c_left, c_right = st.columns([1, 2])
+        with c_left:
             with st.expander("Campaign info", expanded=True):
                 st.markdown("**Name\\***\nCapturing audience for webinar: «marketing: several approaches on how to nurture your customer's leads»")
                 st.caption("Goal")
-                
                 closed_deals = len(leads_df[leads_df['stage'] == 'Closed']) if not leads_df.empty else 0
-                st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-title">Reached the goal</div>
-                        <div class="metric-value-green">{closed_deals}</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-title">Participants (Total Leads)</div>
-                        <div class="metric-value-blue">{len(leads_df)}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                st.markdown(f'<div class="metric-card"><div class="metric-title">Reached the goal</div><div class="metric-value-green">{closed_deals}</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card"><div class="metric-title">Participants (Total Leads)</div><div class="metric-value-blue">{len(leads_df)}</div></div>', unsafe_allow_html=True)
             with st.expander("Workflow settings", expanded=True):
-                st.markdown("**Start mode**\nAt the specified time")
-                st.markdown("**Start time**\n8/3/2026 2:51 PM")
-                st.markdown("**Stop mode**\nAt the specified time")
+                st.markdown("**Start mode**\nAt the specified time\n\n**Start time**\n8/3/2026 2:51 PM")
                 
-        with col_right:
-            tab_flow, tab_audience, tab_linked, tab_add = st.tabs(["CAMPAIGN FLOW (Pipeline)", "AUDIENCE (Database)", "LINKED ENTITY", "➕ ADD PARTICIPANT"])
-            
+        with c_right:
+            tab_flow, tab_add = st.tabs(["CAMPAIGN FLOW (Pipeline)", "➕ ADD PARTICIPANT"])
             with tab_flow:
                 if leads_df.empty:
-                    st.info("No leads in the pipeline. Click the '➕ ADD PARTICIPANT' tab to get started!")
+                    st.info("No leads in the pipeline. Click '➕ ADD PARTICIPANT' to get started!")
                 else:
                     stage_cols = st.columns(len(STAGES))
                     for i, stage in enumerate(STAGES):
@@ -277,54 +265,36 @@ with col_main:
                                 with st.container(border=True):
                                     st.markdown(f"**{lead['first_name']} {lead['last_name']}**")
                                     st.caption(f"{lead['company']} ({lead['lead_source']})")
-                                    
-                                    col_a, col_b = st.columns(2)
-                                    with col_a:
-                                        if i > 0 and st.button("⬅️", key=f"prev_{lead['id']}"):
+                                    ca, cb = st.columns(2)
+                                    with ca:
+                                        if i > 0 and st.button("⬅️", key=f"p_{lead['id']}"):
                                             update_lead_stage(lead['id'], STAGES[i-1])
                                             st.rerun()
-                                    with col_b:
-                                        if i < len(STAGES) - 1 and st.button("➡️", key=f"next_{lead['id']}"):
+                                    with cb:
+                                        if i < len(STAGES) - 1 and st.button("➡️", key=f"n_{lead['id']}"):
                                             update_lead_stage(lead['id'], STAGES[i+1])
                                             st.rerun()
-                                    
                                     with st.expander("AI Email"):
                                         if st.button("Generate Draft", key=f"ai_{lead['id']}"):
                                             with st.spinner("AI drafting..."):
                                                 subj, body = mock_ai_generate_email(lead['first_name'], lead['company'], lead['lead_source'])
-                                                st.session_state[f"draft_subj_{lead['id']}"] = subj
-                                                st.session_state[f"draft_body_{lead['id']}"] = body
-                                        
-                                        if f"draft_subj_{lead['id']}" in st.session_state:
-                                            st.text_input("Subject", value=st.session_state[f"draft_subj_{lead['id']}"], key=f"input_subj_{lead['id']}")
-                                            st.text_area("Body", value=st.session_state[f"draft_body_{lead['id']}"], height=200, key=f"input_body_{lead['id']}")
-                                            if st.button("Send Email", key=f"send_{lead['id']}"):
-                                                log_activity(lead['id'], "Email", f"Sent: {st.session_state[f'draft_subj_{lead['id']}']}")
+                                                st.session_state[f"d_s_{lead['id']}"] = subj
+                                                st.session_state[f"d_b_{lead['id']}"] = body
+                                        if f"d_s_{lead['id']}" in st.session_state:
+                                            st.text_input("Subject", value=st.session_state[f"d_s_{lead['id']}"], key=f"i_s_{lead['id']}")
+                                            st.text_area("Body", value=st.session_state[f"d_b_{lead['id']}"], height=200, key=f"i_b_{lead['id']}")
+                                            if st.button("Send Email", key=f"s_{lead['id']}"):
+                                                log_activity(lead['id'], "Email", f"Sent: {st.session_state[f'd_s_{lead['id']}']}")
                                                 st.success("Sent!")
                                                 st.rerun()
-
-            with tab_audience:
-                if not leads_df.empty:
-                    st.dataframe(leads_df, hide_index=True, use_container_width=True)
-                    st.markdown("### Global Activity Log")
-                    st.dataframe(activities_df, hide_index=True, use_container_width=True)
-                else:
-                    st.info("Database is empty. Click the '➕ ADD PARTICIPANT' tab to get started!")
-                    
-            with tab_linked:
-                st.info("Linked Entities configuration goes here.")
-                
             with tab_add:
                 with st.form("lead_form", clear_on_submit=True):
                     c1, c2 = st.columns(2)
-                    with c1:
-                        first_name = st.text_input("First Name")
-                        email = st.text_input("Email Address")
-                        lead_source = st.selectbox("Lead Source", ["Website", "Referral", "Conference", "Cold Call", "Other"])
-                    with c2:
-                        last_name = st.text_input("Last Name")
-                        company = st.text_input("Company")
-                    
+                    first_name = c1.text_input("First Name")
+                    email = c1.text_input("Email Address")
+                    lead_source = c1.selectbox("Lead Source", ["Website", "Referral", "Conference", "Cold Call", "Other"])
+                    last_name = c2.text_input("Last Name")
+                    company = c2.text_input("Company")
                     if st.form_submit_button("Save Participant", type="primary"):
                         if not first_name or not email:
                             st.error("First Name and Email are required.")
@@ -333,13 +303,55 @@ with col_main:
                             st.success("Participant added successfully!")
                             time.sleep(1)
                             st.rerun()
-                            
-    # ----------------------------------------
-    # MODULE: UNDER CONSTRUCTION
-    # ----------------------------------------
-    else:
-        st.title(selected_menu)
-        st.info(f"The {selected_menu} module is currently under construction.")
+
+    # 4. EMAIL
+    elif selected_menu == "Email":
+        st.markdown("### Email Campaign Builder")
+        st.selectbox("To List", ["All Contacts", "Webinar Registrants", "Qualified Leads Only"])
+        st.text_input("Subject Line", "Don't miss our Q3 Update!")
+        st.text_area("Email Body", height=300, value="Hi {{first_name}},\n\nWe have some exciting news to share...\n\nBest,\nSales Team")
+        st.button("Send Campaign", type="primary")
+
+    # 5. LANDING PAGES
+    elif selected_menu == "Landing pages":
+        st.markdown("### Landing Pages Performance")
+        st.dataframe(mock_landing_pages, hide_index=True, use_container_width=True)
+
+    # 6. EVENTS
+    elif selected_menu == "Events":
+        st.markdown("### Corporate Events Calendar")
+        st.dataframe(mock_events, hide_index=True, use_container_width=True)
+
+    # 7. LEADS (Interactive)
+    elif selected_menu == "Leads":
+        st.markdown("### Global Leads Database")
+        if not leads_df.empty:
+            st.dataframe(leads_df, hide_index=True, use_container_width=True)
+            st.download_button("Download CSV", data=leads_df.to_csv(index=False).encode('utf-8'), file_name='leads.csv', mime='text/csv')
+            st.markdown("#### Activity Log")
+            st.dataframe(activities_df, hide_index=True, use_container_width=True)
+        else:
+            st.info("No leads in database.")
+
+    # 8. ACCOUNTS
+    elif selected_menu == "Accounts":
+        st.markdown("### Managed Accounts")
+        st.dataframe(mock_accounts, hide_index=True, use_container_width=True)
+
+    # 9. DASHBOARDS
+    elif selected_menu == "Dashboards":
+        st.markdown("### Advanced Analytics")
+        d1, d2 = st.columns(2)
+        with d1:
+            st.plotly_chart(px.bar(mock_landing_pages, x='Page Name', y='Page Views', title="Page Views by Campaign"), use_container_width=True)
+        with d2:
+            st.plotly_chart(px.line(pd.DataFrame({'Date': pd.date_range(start='1/1/2026', periods=5, freq='ME'), 'Revenue': [10000, 15000, 12000, 22000, 28000]}), x='Date', y='Revenue', title="Monthly Revenue Trend"), use_container_width=True)
+
+    # 10. MARKETING PLANS
+    elif selected_menu == "Marketing plans":
+        st.markdown("### Marketing Roadmap")
+        st.dataframe(mock_marketing_plans, hide_index=True, use_container_width=True)
+
 
 # --- RIGHT PANE: AI AGENT SIDEBAR ---
 with col_ai:
@@ -347,18 +359,7 @@ with col_ai:
         st.markdown("#### 🤖 Forecast Agent")
         st.caption("← Q4 Forecast Review")
         st.divider()
-        
-        # Hardcoded simulated chat conversation
         st.chat_message("user").write("How do I affect the sales forecast for this quarter?")
-        st.chat_message("assistant").write("""**Focus on closing high-potential opportunities:**
-The "Qualified" and "Contacted" stages have significant drop-offs but represent deals close to closing.
-
-**Actions:**
-1. Identify high-value opportunities in these stages and prioritize them.
-2. Offer time-sensitive incentives to encourage decision-making.
-
-**Re-engage leads in the pipeline:**
-There are several leads sitting untouched. Follow up with inactive leads and revive interest.""")
-
+        st.chat_message("assistant").write("**Focus on closing high-potential opportunities:**\nThe 'Qualified' deals have significant drop-offs but represent deals close to closing.\n\n**Actions:**\n1. Identify high-value opportunities.\n2. Offer time-sensitive incentives.")
         st.divider()
         st.chat_input("Message to AI Agent...", key="ai_chat_input")
