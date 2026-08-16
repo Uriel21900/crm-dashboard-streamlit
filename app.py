@@ -146,7 +146,7 @@ tab_pipeline, tab_db, tab_add_lead = st.tabs(["🚀 Lead Pipeline (Kanban)", "�
 with tab_pipeline:
     st.markdown("### Active Pipeline")
     if leads_df.empty:
-        st.info("No leads in the pipeline. Add a lead to get started.")
+        st.info("No leads in the pipeline. Click the '➕ Add New Lead' tab above to get started!")
     else:
         # Create columns for each stage
         stage_cols = st.columns(len(STAGES))
@@ -216,7 +216,7 @@ with tab_db:
         st.markdown("### Global Activity Log")
         st.dataframe(activities_df, hide_index=True, use_container_width=True)
     else:
-        st.info("Database is empty.")
+        st.info("Database is empty. Click the '➕ Add New Lead' tab above to get started!")
 
 
 # --- TAB 3: Add New Lead ---
