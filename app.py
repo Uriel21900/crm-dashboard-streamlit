@@ -7,13 +7,13 @@ from streamlit_option_menu import option_menu
 
 # --- Constants & Config ---
 st.set_page_config(
-    page_title="Creatio-Style CRM",
+    page_title="Modern CRM",
     page_icon="💼",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS to mimic Creatio's styling
+# Custom CSS to mimic enterprise styling
 st.markdown("""
 <style>
     .metric-card {
@@ -32,12 +32,12 @@ st.markdown("""
     }
     .metric-value-green {
         font-size: 36px;
-        color: #28a745; /* Creatio Green */
+        color: #28a745; /* Green */
         font-weight: 700;
     }
     .metric-value-blue {
         font-size: 36px;
-        color: #007bff; /* Creatio Blue */
+        color: #007bff; /* Blue */
         font-weight: 700;
     }
     /* Hide Streamlit default padding for top */
@@ -129,7 +129,7 @@ def mock_ai_generate_email(first_name, company, source):
 leads_df = get_leads_df()
 activities_df = get_activities_df()
 
-# --- SIDEBAR NAVIGATION (Creatio Style) ---
+# --- SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1200px-Python-logo-notext.svg.png", width=50) # Placeholder Logo
     
@@ -150,9 +150,9 @@ with st.sidebar:
 # --- MAIN LAYOUT ---
 if selected_menu == "Campaigns":
     
-    st.markdown("### ← Creatio 'No-code days Miami' event invitation & products promotion campaign")
+    st.markdown("### ← Q3 'No-code days Miami' event invitation & products promotion campaign")
     
-    # Define Layout Columns matching Creatio
+    # Define Layout Columns
     col_left, col_right = st.columns([1, 3])
     
     # --- LEFT COLUMN (KPIs & Info) ---
