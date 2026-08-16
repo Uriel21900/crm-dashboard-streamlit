@@ -2,21 +2,54 @@ import streamlit as st
 import pandas as pd
 import time
 from datetime import datetime
-import json
 from sqlalchemy import text
+from streamlit_option_menu import option_menu
 
 # --- Constants & Config ---
 st.set_page_config(
-    page_title="CRM Dashboard 2.0",
+    page_title="Creatio-Style CRM",
     page_icon="💼",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+# Custom CSS to mimic Creatio's styling
+st.markdown("""
+<style>
+    .metric-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: white;
+        color: black;
+    }
+    .metric-title {
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    .metric-value-green {
+        font-size: 36px;
+        color: #28a745; /* Creatio Green */
+        font-weight: 700;
+    }
+    .metric-value-blue {
+        font-size: 36px;
+        color: #007bff; /* Creatio Blue */
+        font-weight: 700;
+    }
+    /* Hide Streamlit default padding for top */
+    .block-container {
+        padding-top: 2rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 STAGES = ["New", "Contacted", "Qualified", "Closed"]
 
-# --- Database Connection (Cloud-Ready) ---
-# By using st.connection('sql'), migrating to Postgres is just changing the secrets.toml URL!
+# --- Database Connection ---
 conn = st.connection('sql', type='sql', url='sqlite:///crm_database.db')
 
 def init_db():
@@ -55,12 +88,8 @@ def add_lead(first_name, last_name, email, company, lead_source):
             VALUES (:fn, :ln, :em, :co, :ls, :st, :ca)
         '''), {'fn': first_name, 'ln': last_name, 'em': email, 'co': company, 'ls': lead_source, 'st': 'New', 'ca': created_at})
         s.commit()
-        
-        # Get the inserted ID
         result = s.execute(text("SELECT id FROM leads ORDER BY id DESC LIMIT 1")).fetchone()
         lead_id = result[0]
-        
-        # Log creation activity
         s.execute(text('''
             INSERT INTO activities (lead_id, activity_type, details, created_at)
             VALUES (:lid, :at, :det, :ca)
@@ -88,157 +117,141 @@ def log_activity(lead_id, activity_type, details):
 def get_leads_df():
     return conn.query("SELECT * FROM leads ORDER BY created_at DESC")
 
-def get_activities_df(lead_id=None):
-    if lead_id:
-        return conn.query(f"SELECT * FROM activities WHERE lead_id = {lead_id} ORDER BY created_at DESC")
+def get_activities_df():
     return conn.query("SELECT * FROM activities ORDER BY created_at DESC")
 
 def mock_ai_generate_email(first_name, company, source):
-    """Mocks calling an LLM (like Ollama or Gemini) to generate an email draft"""
-    time.sleep(1.5) # Simulate API latency
-    if source == 'Conference':
-        hook = f"It was great meeting you at the recent conference!"
-    elif source == 'Website':
-        hook = f"I noticed you requested more information on our website."
-    else:
-        hook = f"I wanted to reach out regarding your interest in our platform."
-        
-    draft = f"""Hi {first_name},
-
-{hook} We specialize in helping companies like {company} streamline their workflows and boost productivity. 
-
-I would love to show you how we can help. Do you have 10 minutes next week for a quick demo? You can book a time directly on my calendar here: https://calendly.com/demo
-
-Best regards,
-
-Sales Team
-Acme Corp
-sales@acmecorp.com"""
+    time.sleep(1.5)
+    hook = f"I noticed you requested more information on our website." if source == 'Website' else f"It was great meeting you at the recent conference!" if source == 'Conference' else f"I wanted to reach out regarding your interest in our platform."
+    draft = f"Hi {first_name},\n\n{hook} We specialize in helping companies like {company} streamline their workflows.\n\nDo you have 10 minutes next week for a quick demo? Book here: https://calendly.com/demo\n\nBest,\nSales Team"
     return "Demo Request Follow-up", draft
-
-# --- UI Layout ---
-st.title("💼 Modern CRM Dashboard")
 
 leads_df = get_leads_df()
 activities_df = get_activities_df()
 
-# 1. High Level KPIs (Inverted Pyramid Top)
-st.markdown("### Executive Summary")
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric("Total Leads", len(leads_df))
-with col2:
-    closed_leads = len(leads_df[leads_df['stage'] == 'Closed']) if not leads_df.empty else 0
-    st.metric("Closed Deals", closed_leads)
-with col3:
-    conversion_rate = f"{(closed_leads / len(leads_df) * 100):.1f}%" if not leads_df.empty and len(leads_df) > 0 else "0%"
-    st.metric("Conversion Rate", conversion_rate)
-with col4:
-    emails_sent = len(activities_df[activities_df['activity_type'] == 'Email']) if not activities_df.empty else 0
-    st.metric("Emails Sent", emails_sent)
+# --- SIDEBAR NAVIGATION (Creatio Style) ---
+with st.sidebar:
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1200px-Python-logo-notext.svg.png", width=50) # Placeholder Logo
+    
+    selected_menu = option_menu(
+        menu_title="All apps",
+        options=["Home", "Contacts", "Campaigns", "Email", "Landing pages", "Events", "Leads", "Accounts", "Dashboards", "Marketing plans"],
+        icons=["house", "person-badge", "megaphone", "envelope", "window", "balloon", "person-lines-fill", "building", "bar-chart", "calendar"],
+        menu_icon="cast",
+        default_index=2, # Default to Campaigns
+        styles={
+            "container": {"padding": "0!important", "background-color": "transparent"},
+            "icon": {"color": "#a0a0a0", "font-size": "18px"}, 
+            "nav-link": {"font-size": "14px", "text-align": "left", "margin":"0px", "--hover-color": "#333"},
+            "nav-link-selected": {"background-color": "#444"},
+        }
+    )
 
-st.divider()
-
-# 2. Tabs for Workflow
-tab_pipeline, tab_db, tab_add_lead = st.tabs(["🚀 Lead Pipeline (Kanban)", "📋 Database & Activity", "➕ Add New Lead"])
-
-# --- TAB 1: Lead Pipeline (Kanban) ---
-with tab_pipeline:
-    st.markdown("### Active Pipeline")
-    if leads_df.empty:
-        st.info("No leads in the pipeline. Click the '➕ Add New Lead' tab above to get started!")
-    else:
-        # Create columns for each stage
-        stage_cols = st.columns(len(STAGES))
-        
-        for i, stage in enumerate(STAGES):
-            with stage_cols[i]:
-                st.markdown(f"**{stage}**")
-                stage_leads = leads_df[leads_df['stage'] == stage]
-                
-                for _, lead in stage_leads.iterrows():
-                    with st.container(border=True):
-                        st.markdown(f"**{lead['first_name']} {lead['last_name']}**")
-                        st.caption(f"{lead['company']} ({lead['lead_source']})")
-                        
-                        # Navigation buttons for the pipeline
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            if i > 0:
-                                if st.button("⬅️", key=f"prev_{lead['id']}", help="Move back"):
-                                    update_lead_stage(lead['id'], STAGES[i-1])
-                                    st.rerun()
-                        with col_b:
-                            if i < len(STAGES) - 1:
-                                if st.button("➡️", key=f"next_{lead['id']}", help="Move forward"):
-                                    update_lead_stage(lead['id'], STAGES[i+1])
-                                    st.rerun()
-                        
-                        with st.expander("AI Email"):
-                            if st.button("Generate Draft", key=f"ai_{lead['id']}"):
-                                with st.spinner("AI drafting..."):
-                                    subj, body = mock_ai_generate_email(lead['first_name'], lead['company'], lead['lead_source'])
-                                    st.session_state[f"draft_subj_{lead['id']}"] = subj
-                                    st.session_state[f"draft_body_{lead['id']}"] = body
-                            
-                            if f"draft_subj_{lead['id']}" in st.session_state:
-                                st.text_input("Subject", value=st.session_state[f"draft_subj_{lead['id']}"], key=f"input_subj_{lead['id']}")
-                                st.text_area("Body", value=st.session_state[f"draft_body_{lead['id']}"], height=200, key=f"input_body_{lead['id']}")
-                                if st.button("Send Email", key=f"send_{lead['id']}"):
-                                    log_activity(lead['id'], "Email", f"Sent: {st.session_state[f'draft_subj_{lead['id']}']}")
-                                    st.success("Sent!")
-                                    st.rerun()
-
-
-# --- TAB 2: Database & Activity ---
-with tab_db:
-    st.markdown("### CRM Database")
-    if not leads_df.empty:
-        st.dataframe(
-            leads_df,
-            column_config={
-                "id": "ID",
-                "first_name": "First Name",
-                "last_name": "Last Name",
-                "email": "Email",
-                "company": "Company",
-                "lead_source": "Source",
-                "stage": "Pipeline Stage",
-                "created_at": st.column_config.DatetimeColumn("Date Added", format="D MMM YYYY, h:mm a"),
-            },
-            hide_index=True,
-            use_container_width=True
-        )
-        csv = leads_df.to_csv(index=False).encode('utf-8')
-        st.download_button("Download Data as CSV", data=csv, file_name='crm_leads.csv', mime='text/csv')
-        
-        st.divider()
-        st.markdown("### Global Activity Log")
-        st.dataframe(activities_df, hide_index=True, use_container_width=True)
-    else:
-        st.info("Database is empty. Click the '➕ Add New Lead' tab above to get started!")
-
-
-# --- TAB 3: Add New Lead ---
-with tab_add_lead:
-    st.markdown("### Enter Lead Information")
-    with st.form("lead_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            first_name = st.text_input("First Name", placeholder="Jane")
-            email = st.text_input("Email Address", placeholder="jane@company.com")
-            lead_source = st.selectbox("Lead Source", ["Website", "Referral", "Conference", "Cold Call", "Other"])
-        with col2:
-            last_name = st.text_input("Last Name", placeholder="Doe")
-            company = st.text_input("Company", placeholder="Acme Corp")
+# --- MAIN LAYOUT ---
+if selected_menu == "Campaigns":
+    
+    st.markdown("### ← Creatio 'No-code days Miami' event invitation & products promotion campaign")
+    
+    # Define Layout Columns matching Creatio
+    col_left, col_right = st.columns([1, 3])
+    
+    # --- LEFT COLUMN (KPIs & Info) ---
+    with col_left:
+        with st.expander("Campaign info", expanded=True):
+            st.markdown("**Name\\***\nCapturing audience for webinar: «marketing: several approaches on how to nurture your customer's leads»")
+            st.caption("Goal")
             
-        submit_btn = st.form_submit_button("Save Lead", type="primary")
+            # Custom KPI Cards matching screenshot
+            closed_deals = len(leads_df[leads_df['stage'] == 'Closed']) if not leads_df.empty else 0
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-title">Reached the goal</div>
+                    <div class="metric-value-green">{closed_deals}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Participants (Total Leads)</div>
+                    <div class="metric-value-blue">{len(leads_df)}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with st.expander("Workflow settings", expanded=True):
+            st.markdown("**Start mode**\nAt the specified time")
+            st.markdown("**Start time**\n8/3/2026 2:51 PM")
+            st.markdown("**Stop mode**\nAt the specified time")
+            
+    # --- RIGHT COLUMN (Main Workspace Tabs) ---
+    with col_right:
+        tab_flow, tab_audience, tab_linked, tab_add = st.tabs(["CAMPAIGN FLOW (Pipeline)", "AUDIENCE (Database)", "LINKED ENTITY", "➕ ADD PARTICIPANT"])
         
-        if submit_btn:
-            if not first_name or not email:
-                st.error("First Name and Email are required fields.")
+        with tab_flow:
+            if leads_df.empty:
+                st.info("No leads in the pipeline. Click the '➕ ADD PARTICIPANT' tab to get started!")
             else:
-                lead_id = add_lead(first_name, last_name, email, company, lead_source)
-                st.success(f"Lead '{first_name} {last_name}' saved successfully!")
-                time.sleep(1) # Brief pause so user sees the success message before rerun
-                st.rerun()
+                stage_cols = st.columns(len(STAGES))
+                for i, stage in enumerate(STAGES):
+                    with stage_cols[i]:
+                        st.markdown(f"**{stage}**")
+                        stage_leads = leads_df[leads_df['stage'] == stage]
+                        for _, lead in stage_leads.iterrows():
+                            with st.container(border=True):
+                                st.markdown(f"**{lead['first_name']} {lead['last_name']}**")
+                                st.caption(f"{lead['company']} ({lead['lead_source']})")
+                                
+                                col_a, col_b = st.columns(2)
+                                with col_a:
+                                    if i > 0 and st.button("⬅️", key=f"prev_{lead['id']}"):
+                                        update_lead_stage(lead['id'], STAGES[i-1])
+                                        st.rerun()
+                                with col_b:
+                                    if i < len(STAGES) - 1 and st.button("➡️", key=f"next_{lead['id']}"):
+                                        update_lead_stage(lead['id'], STAGES[i+1])
+                                        st.rerun()
+                                
+                                with st.expander("AI Email"):
+                                    if st.button("Generate Draft", key=f"ai_{lead['id']}"):
+                                        with st.spinner("AI drafting..."):
+                                            subj, body = mock_ai_generate_email(lead['first_name'], lead['company'], lead['lead_source'])
+                                            st.session_state[f"draft_subj_{lead['id']}"] = subj
+                                            st.session_state[f"draft_body_{lead['id']}"] = body
+                                    
+                                    if f"draft_subj_{lead['id']}" in st.session_state:
+                                        st.text_input("Subject", value=st.session_state[f"draft_subj_{lead['id']}"], key=f"input_subj_{lead['id']}")
+                                        st.text_area("Body", value=st.session_state[f"draft_body_{lead['id']}"], height=200, key=f"input_body_{lead['id']}")
+                                        if st.button("Send Email", key=f"send_{lead['id']}"):
+                                            log_activity(lead['id'], "Email", f"Sent: {st.session_state[f'draft_subj_{lead['id']}']}")
+                                            st.success("Sent!")
+                                            st.rerun()
+
+        with tab_audience:
+            if not leads_df.empty:
+                st.dataframe(leads_df, hide_index=True, use_container_width=True)
+                st.markdown("### Global Activity Log")
+                st.dataframe(activities_df, hide_index=True, use_container_width=True)
+            else:
+                st.info("Database is empty. Click the '➕ ADD PARTICIPANT' tab to get started!")
+                
+        with tab_linked:
+            st.info("Linked Entities configuration goes here.")
+            
+        with tab_add:
+            with st.form("lead_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    first_name = st.text_input("First Name")
+                    email = st.text_input("Email Address")
+                    lead_source = st.selectbox("Lead Source", ["Website", "Referral", "Conference", "Cold Call", "Other"])
+                with col2:
+                    last_name = st.text_input("Last Name")
+                    company = st.text_input("Company")
+                
+                if st.form_submit_button("Save Participant", type="primary"):
+                    if not first_name or not email:
+                        st.error("First Name and Email are required.")
+                    else:
+                        add_lead(first_name, last_name, email, company, lead_source)
+                        st.success("Participant added successfully!")
+                        time.sleep(1)
+                        st.rerun()
+else:
+    st.title(selected_menu)
+    st.info(f"The {selected_menu} module is under construction.")
